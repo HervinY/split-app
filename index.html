@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Calculadora de Gastos Compartidos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        .modal {
+            transition: opacity 0.25s ease;
+        }
+        .modal-content {
+            transition: transform 0.25s ease;
+        }
+    </style>
+</head>
+<body class="bg-gray-900 text-white antialiased">
+
+    <div id="app-container" class="container mx-auto p-4 md:p-8 max-w-4xl">
+
+        <!-- Vista de Selección de Eventos -->
+        <div id="events-view">
+            <h1 class="text-3xl md:text-4xl font-bold text-center mb-6 text-cyan-400">Mis Eventos</h1>
+            <div class="bg-gray-800 p-6 rounded-2xl shadow-lg mb-8">
+                <h2 class="text-xl font-semibold mb-4">Crear Nuevo Evento</h2>
+                <div class="flex flex-col sm:flex-row gap-4">
+                    <input type="text" id="new-event-name" placeholder="Ej: Almuerzo del Sábado" class="w-full bg-gray-700 text-white placeholder-gray-400 border border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-cyan-500 focus:outline-none">
+                    <button id="create-event-btn" class="w-full sm:w-auto bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-6 rounded-lg transition-colors">Crear</button>
+                </div>
+            </div>
+            <div id="events-list" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Las tarjetas de eventos se insertarán aquí -->
+            </div>
+        </div>
+
+        <!-- Vista de la Calculadora de Evento -->
+        <div id="calculator-view" class="hidden">
+            <button id="back-to-events-btn" class="mb-6 bg-gray-700 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded-lg transition-colors">&larr; Volver a Eventos</button>
+            <h1 id="event-title" class="text-3xl md:text-4xl font-bold text-center mb-8 text-cyan-400"></h1>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <!-- Columna Izquierda: Participantes y Gastos -->
+                <div class="flex flex-col gap-8">
+                    <!-- Sección de Participantes -->
+                    <div class="bg-gray-800 p-6 rounded-2xl shadow-lg">
+                        <h2 class="text-xl font-semibold mb-4">1. Participantes</h2>
+                        <div class="flex gap-4 mb-4">
+                            <input type="text" id="participant-name" placeholder="Nombre del amigo" class="w-full bg-gray-700 text-white placeholder-gray-400 border border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-cyan-500 focus:outline-none">
+                            <button id="add-participant-btn" class="bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Añadir</button>
+                        </div>
+                        <ul id="participants-list" class="list-disc list-inside text-gray-300">
+                            <!-- Los participantes se insertarán aquí -->
+                        </ul>
+                    </div>
+
+                    <!-- Sección de Gastos -->
+                    <div class="bg-gray-800 p-6 rounded-2xl shadow-lg">
+                        <h2 class="text-xl font-semibold mb-4">2. Gastos</h2>
+                        <div class="space-y-4">
+                            <input type="text" id="expense-description" placeholder="Descripción (Ej: Carne)" class="w-full bg-gray-700 text-white placeholder-gray-400 border border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-cyan-500 focus:outline-none">
+                            <input type="number" id="expense-amount" placeholder="Monto" class="w-full bg-gray-700 text-white placeholder-gray-400 border border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-cyan-500 focus:outline-none">
+                            <select id="expense-paid-by" class="w-full bg-gray-700 text-white border border-gray-600 rounded-lg p-3 focus:ring-2 focus:ring-cyan-500 focus:outline-none">
+                                <option value="">¿Quién pagó?</option>
+                                <!-- Opciones de participantes aquí -->
+                            </select>
+                            <button id="add-expense-btn" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Añadir Gasto</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Columna Derecha: Resumen y Balances -->
+                <div class="flex flex-col gap-8">
+                    <!-- Sección de Resumen -->
+                    <div class="bg-gray-800 p-6 rounded-2xl shadow-lg text-center">
+                        <h2 class="text-xl font-semibold mb-4">Resumen</h2>
+                        <div class="flex justify-around">
+                            <div>
+                                <p class="text-gray-400 text-sm">Gasto Total</p>
+                                <p id="total-amount" class="text-2xl font-bold text-cyan-400">$0</p>
+                            </div>
+                            <div>
+                                <p class="text-gray-400 text-sm">Costo por Persona</p>
+                                <p id="cost-per-person" class="text-2xl font-bold text-cyan-400">$0</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Gastos -->
+                    <div class="bg-gray-800 p-6 rounded-2xl shadow-lg">
+                        <h3 class="text-lg font-semibold mb-4">Lista de Gastos</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr>
+                                        <th class="py-2 px-4">Descripción</th>
+                                        <th class="py-2 px-4">Monto</th>
+                                        <th class="py-2 px-4">Pagado por</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="expenses-table-body">
+                                    <!-- Filas de gastos aquí -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- Tabla de Balances -->
+                    <div class="bg-gray-800 p-6 rounded-2xl shadow-lg">
+                        <h3 class="text-lg font-semibold mb-4">Balances</h3>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left">
+                                <thead>
+                                    <tr>
+                                        <th class="py-2 px-4">Amigo</th>
+                                        <th class="py-2 px-4">Aportado</th>
+                                        <th class="py-2 px-4">Balance</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="balances-table-body">
+                                    <!-- Filas de balances aquí -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                    <button id="settle-up-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-4 rounded-lg text-lg transition-colors">3. Liquidar Cuentas</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Modal de Liquidación -->
+    <div id="settlement-modal" class="modal fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center p-4 hidden opacity-0">
+        <div class="modal-content bg-gray-800 rounded-2xl shadow-2xl p-8 max-w-md w-full transform scale-95">
+            <h2 class="text-2xl font-bold mb-6 text-cyan-400">Plan de Pagos Sugerido</h2>
+            <div id="settlement-steps" class="space-y-4">
+                <!-- Instrucciones de pago aquí -->
+            </div>
+            <button id="close-modal-btn" class="mt-8 w-full bg-gray-600 hover:bg-gray-700 text-white font-bold py-3 px-4 rounded-lg transition-colors">Cerrar</button>
+        </div>
+    </div>
+
+    <script type="module">
+        // Importaciones de Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, addDoc, getDocs, onSnapshot, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Configuración de Firebase ---
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : { apiKey: "DEMO", authDomain: "DEMO", projectId: "DEMO" };
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-split-app';
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // --- Estado de la Aplicación ---
+        let currentUserId = null;
+        let currentEventId = null;
+        let currentEventData = null;
+        let unsubscribeEvent = null; // Para la escucha en tiempo real
+
+        const eventsCollectionRef = collection(db, `artifacts/${appId}/public/data/events`);
+
+        // --- Elementos del DOM ---
+        const eventsView = document.getElementById('events-view');
+        const calculatorView = document.getElementById('calculator-view');
+        const createEventBtn = document.getElementById('create-event-btn');
+        const newEventNameInput = document.getElementById('new-event-name');
+        const eventsList = document.getElementById('events-list');
+        const backToEventsBtn = document.getElementById('back-to-events-btn');
+        const eventTitle = document.getElementById('event-title');
+        const addParticipantBtn = document.getElementById('add-participant-btn');
+        const participantNameInput = document.getElementById('participant-name');
+        const participantsList = document.getElementById('participants-list');
+        const addExpenseBtn = document.getElementById('add-expense-btn');
+        const expenseDescriptionInput = document.getElementById('expense-description');
+        const expenseAmountInput = document.getElementById('expense-amount');
+        const expensePaidBySelect = document.getElementById('expense-paid-by');
+        const totalAmountEl = document.getElementById('total-amount');
+        const costPerPersonEl = document.getElementById('cost-per-person');
+        const expensesTableBody = document.getElementById('expenses-table-body');
+        const balancesTableBody = document.getElementById('balances-table-body');
+        const settleUpBtn = document.getElementById('settle-up-btn');
+        const settlementModal = document.getElementById('settlement-modal');
+        const closeModalBtn = document.getElementById('close-modal-btn');
+        const settlementSteps = document.getElementById('settlement-steps');
+
+        // --- Lógica de la Aplicación ---
+
+        // Función para formatear moneda
+        const formatCurrency = (amount) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0 }).format(amount);
+
+        // Renderizar la lista de eventos
+        const renderEventsList = async () => {
+            const querySnapshot = await getDocs(eventsCollectionRef);
+            eventsList.innerHTML = '';
+            if (querySnapshot.empty) {
+                eventsList.innerHTML = `<p class="text-gray-400 col-span-full text-center">No hay eventos. ¡Crea el primero!</p>`;
+                return;
+            }
+            querySnapshot.forEach(doc => {
+                const event = doc.data();
+                const eventCard = document.createElement('div');
+                eventCard.className = 'bg-gray-800 p-6 rounded-2xl shadow-lg cursor-pointer hover:bg-gray-700 hover:ring-2 hover:ring-cyan-500 transition-all';
+                eventCard.dataset.id = doc.id;
+                eventCard.innerHTML = `
+                    <h3 class="text-xl font-bold text-white">${event.name}</h3>
+                    <p class="text-gray-400 mt-2">${event.participants.length} participante(s)</p>
+                    <p class="text-gray-500 text-sm mt-1">Creado: ${new Date(event.createdAt.seconds * 1000).toLocaleDateString()}</p>
+                `;
+                eventCard.addEventListener('click', () => selectEvent(doc.id));
+                eventsList.appendChild(eventCard);
+            });
+        };
+
+        // Seleccionar un evento y cambiar de vista
+        const selectEvent = (eventId) => {
+            currentEventId = eventId;
+            eventsView.classList.add('hidden');
+            calculatorView.classList.remove('hidden');
+
+            if (unsubscribeEvent) unsubscribeEvent();
+            unsubscribeEvent = onSnapshot(doc(db, `artifacts/${appId}/public/data/events`, eventId), (doc) => {
+                if (doc.exists()) {
+                    currentEventData = doc.data();
+                    renderCalculatorView();
+                } else {
+                    console.error("El evento seleccionado ya no existe.");
+                    showEventsView();
+                }
+            });
+        };
+        
+        const showEventsView = () => {
+            if (unsubscribeEvent) unsubscribeEvent();
+            currentEventId = null;
+            currentEventData = null;
+            eventsView.classList.remove('hidden');
+            calculatorView.classList.add('hidden');
+            renderEventsList();
+        };
+
+        // Renderizar toda la vista de la calculadora
+        const renderCalculatorView = () => {
+            if (!currentEventData) return;
+
+            eventTitle.textContent = currentEventData.name;
+
+            // Renderizar lista de participantes
+            participantsList.innerHTML = '';
+            currentEventData.participants.forEach(p => {
+                participantsList.innerHTML += `<li class="py-1">${p}</li>`;
+            });
+
+            // Llenar el select de "quién pagó"
+            expensePaidBySelect.innerHTML = '<option value="">¿Quién pagó?</option>';
+            currentEventData.participants.forEach(p => {
+                expensePaidBySelect.innerHTML += `<option value="${p}">${p}</option>`;
+            });
+
+            // Calcular y renderizar resumen y tablas
+            calculateAndRenderSummaries();
+        };
+
+        const calculateAndRenderSummaries = () => {
+            const participants = currentEventData.participants;
+            const expenses = currentEventData.expenses;
+            const numParticipants = participants.length;
+
+            const totalExpense = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+            const costPerPerson = numParticipants > 0 ? totalExpense / numParticipants : 0;
+
+            totalAmountEl.textContent = formatCurrency(totalExpense);
+            costPerPersonEl.textContent = formatCurrency(costPerPerson);
+
+            // Renderizar tabla de gastos
+            expensesTableBody.innerHTML = '';
+            expenses.forEach(expense => {
+                expensesTableBody.innerHTML += `
+                    <tr class="border-b border-gray-700">
+                        <td class="py-2 px-4">${expense.description}</td>
+                        <td class="py-2 px-4">${formatCurrency(expense.amount)}</td>
+                        <td class="py-2 px-4">${expense.paidBy}</td>
+                    </tr>
+                `;
+            });
+
+            // Renderizar tabla de balances
+            balancesTableBody.innerHTML = '';
+            if (numParticipants > 0) {
+                participants.forEach(participant => {
+                    const paid = expenses
+                        .filter(e => e.paidBy === participant)
+                        .reduce((sum, e) => sum + e.amount, 0);
+                    const balance = paid - costPerPerson;
+                    const balanceClass = balance >= 0 ? 'text-green-400' : 'text-red-400';
+                    balancesTableBody.innerHTML += `
+                        <tr class="border-b border-gray-700">
+                            <td class="py-2 px-4 font-medium">${participant}</td>
+                            <td class="py-2 px-4">${formatCurrency(paid)}</td>
+                            <td class="py-2 px-4 font-bold ${balanceClass}">${formatCurrency(balance)}</td>
+                        </tr>
+                    `;
+                });
+            }
+        };
+
+        // --- Manejadores de Eventos ---
+
+        createEventBtn.addEventListener('click', async () => {
+            const eventName = newEventNameInput.value.trim();
+            if (eventName) {
+                try {
+                    const newEventDoc = await addDoc(eventsCollectionRef, {
+                        name: eventName,
+                        participants: [],
+                        expenses: [],
+                        createdAt: new Date()
+                    });
+                    newEventNameInput.value = '';
+                    selectEvent(newEventDoc.id);
+                } catch (error) {
+                    console.error("Error al crear evento: ", error);
+                    alert("No se pudo crear el evento.");
+                }
+            }
+        });
+
+        backToEventsBtn.addEventListener('click', showEventsView);
+
+        addParticipantBtn.addEventListener('click', async () => {
+            const name = participantNameInput.value.trim();
+            if (name && currentEventId && !currentEventData.participants.includes(name)) {
+                const eventRef = doc(db, `artifacts/${appId}/public/data/events`, currentEventId);
+                await updateDoc(eventRef, {
+                    participants: arrayUnion(name)
+                });
+                participantNameInput.value = '';
+            }
+        });
+
+        addExpenseBtn.addEventListener('click', async () => {
+            const description = expenseDescriptionInput.value.trim();
+            const amount = parseFloat(expenseAmountInput.value);
+            const paidBy = expensePaidBySelect.value;
+
+            if (description && amount > 0 && paidBy && currentEventId) {
+                 const newExpense = { description, amount, paidBy };
+                 const eventRef = doc(db, `artifacts/${appId}/public/data/events`, currentEventId);
+                 await updateDoc(eventRef, {
+                    expenses: arrayUnion(newExpense)
+                 });
+                 expenseDescriptionInput.value = '';
+                 expenseAmountInput.value = '';
+                 expensePaidBySelect.value = '';
+            } else {
+                alert("Por favor, completa todos los campos del gasto.");
+            }
+        });
+
+        settleUpBtn.addEventListener('click', () => {
+            const participants = currentEventData.participants;
+            const expenses = currentEventData.expenses;
+            const numParticipants = participants.length;
+
+            if (numParticipants < 2) {
+                alert("Necesitas al menos 2 participantes para liquidar.");
+                return;
+            }
+
+            const totalExpense = expenses.reduce((sum, expense) => sum + expense.amount, 0);
+            if (totalExpense === 0) {
+                alert("No hay gastos que liquidar.");
+                return;
+            }
+            const costPerPerson = totalExpense / numParticipants;
+
+            const balances = participants.map(p => {
+                const paid = expenses.filter(e => e.paidBy === p).reduce((sum, e) => sum + e.amount, 0);
+                return { name: p, balance: paid - costPerPerson };
+            });
+
+            const debtors = balances.filter(p => p.balance < 0).sort((a, b) => a.balance - b.balance);
+            const creditors = balances.filter(p => p.balance > 0).sort((a, b) => b.balance - a.balance);
+            
+            const transactions = [];
+
+            let i = 0, j = 0;
+            while (i < debtors.length && j < creditors.length) {
+                const debtor = debtors[i];
+                const creditor = creditors[j];
+                const amountToSettle = Math.min(Math.abs(debtor.balance), creditor.balance);
+
+                if (amountToSettle > 0.01) { // Evitar transacciones muy pequeñas por errores de punto flotante
+                    transactions.push({
+                        from: debtor.name,
+                        to: creditor.name,
+                        amount: amountToSettle
+                    });
+                    
+                    debtor.balance += amountToSettle;
+                    creditor.balance -= amountToSettle;
+                }
+
+                if (Math.abs(debtor.balance) < 0.01) i++;
+                if (Math.abs(creditor.balance) < 0.01) j++;
+            }
+
+            settlementSteps.innerHTML = '';
+            if (transactions.length === 0) {
+                settlementSteps.innerHTML = '<p class="text-center text-green-400 font-semibold">¡Todos están en paz! No se necesitan pagos.</p>';
+            } else {
+                transactions.forEach(t => {
+                    const step = document.createElement('div');
+                    step.className = 'bg-gray-700 p-4 rounded-lg flex items-center justify-between';
+                    step.innerHTML = `
+                        <div>
+                            <span class="font-bold text-red-400">${t.from}</span>
+                            <span class="text-gray-400"> le paga a </span>
+                            <span class="font-bold text-green-400">${t.to}</span>
+                        </div>
+                        <div class="font-bold text-xl text-white">${formatCurrency(t.amount)}</div>
+                    `;
+                    settlementSteps.appendChild(step);
+                });
+            }
+            
+            settlementModal.classList.remove('hidden');
+            setTimeout(() => {
+                settlementModal.classList.remove('opacity-0');
+                settlementModal.querySelector('.modal-content').classList.remove('scale-95');
+            }, 10);
+        });
+
+        closeModalBtn.addEventListener('click', () => {
+            settlementModal.classList.add('opacity-0');
+            settlementModal.querySelector('.modal-content').classList.add('scale-95');
+            setTimeout(() => settlementModal.classList.add('hidden'), 250);
+        });
+
+        // --- Inicialización ---
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                currentUserId = user.uid;
+                console.log("Usuario autenticado:", currentUserId);
+                showEventsView();
+            } else {
+                try {
+                    // Si no hay token, iniciar sesión anónimamente
+                    if (typeof __initial_auth_token === 'undefined' || !__initial_auth_token) {
+                        await signInAnonymously(auth);
+                    } else {
+                        // Usar el token proporcionado por el entorno
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    }
+                } catch (error) {
+                    console.error("Error de autenticación:", error);
+                    document.body.innerHTML = '<div class="text-center text-red-500 p-8">Error de autenticación. La aplicación no puede iniciarse.</div>';
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
